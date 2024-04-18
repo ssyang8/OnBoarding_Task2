@@ -1,52 +1,16 @@
+from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from .models import User, Book
 from .forms import UserForm, BookForm, QueryForm, BookQueryForm
 from django.forms import formset_factory
+from django.db.models import Count, Q
 
 
 def home(request):
-    ConstraintFormSet = formset_factory(QueryForm, extra=1)
-    formset = ConstraintFormSet(request.POST or None)
-    results = None
     users = User.objects.all()
     books = Book.objects.all()
-    if request.method == 'POST' and formset.is_valid():
-        results = User.objects.all()  # Initialize with all users if needed
-        for form in formset:
-            key = form.cleaned_data['key']
-            constraint = form.cleaned_data['constraint']
-            value = form.cleaned_data['value']
-            results = results.filter(**{f'{key}__{constraint}': value})
-
-    return render(request, 'books/home.html', {
-        'formset': formset,
-        'results': results,
-        'users': users,
-        'books': books
-    })
-
-
-def book_home(request):
-    ConstraintFormSet_book = formset_factory(BookQueryForm, extra=1)
-    formset_book = ConstraintFormSet_book(request.POST or None)
-    results_book = None
-    users = User.objects.all()
-    books = Book.objects.all()
-    print("hello")
-    if request.method == 'POST' and formset_book.is_valid():
-        results_book = Book.objects.all()
-        for form in formset_book:
-            key = form.cleaned_data['key']
-            constraint = form.cleaned_data['constraint']
-            value = form.cleaned_data['value']
-            results_book = results_book.filter(
-                **{f'{key}__{constraint}': value})
-    return render(request, 'books/home.html', {
-        'formset_book': formset_book,
-        'results_book': results_book,
-        'users': users,
-        'books': books
-    })
+    return render(request, 'books/home.html', {'users': users, 'books': books})
 
 
 def user_detail(request, pk):
@@ -95,16 +59,55 @@ def add_book(request):
     return render(request, 'books/add_book.html', {'form': form})
 
 
+def query_view(request):
+    ConstraintFormSet = formset_factory(QueryForm, extra=1)
+    formset = ConstraintFormSet(request.POST or None)
+    results = None  # Start with all users
+    if formset.is_valid():
+        results = User.objects.all()
+        for form in formset:
+            key = form.cleaned_data['key']
+
+            constraint = form.cleaned_data['constraint']
+
+            value = form.cleaned_data['value']
+            if key == 'liked_books':
+                results = results.annotate(
+                    num_liked_books=Count('liked_books'))
+                results = results.filter(
+                    **{f'num_liked_books__{constraint}': value})
+
+            else:
+                results = results.filter(**{f'{key}__{constraint}': value})
+            print(results)
+    return render(request, 'books/query.html', {'formset': formset,  'results': results})
+
+
 def delete_user(request, pk):
-    user = get_object_or_404(User, pk=pk)
-    if request.method == 'POST':
-        user.delete()
-        return redirect('home')  # Redirect to the home page after deletion
-    else:
-        # If not POST, redirect to the confirmation page again or handle differently
-        return redirect('books/confirm_delete', pk=pk)
+    user = User.objects.get(pk=pk)
+    user.delete()
+    return redirect('home')
 
 
-def delete_confirmation(request, pk):
-    user = get_object_or_404(User, pk=pk)
-    return render(request, 'books/delete_confirmation.html', {'user': user})
+def bookquery_view(request):
+    ConstraintFormSet = formset_factory(BookQueryForm, extra=1)
+    formset = ConstraintFormSet(request.POST or None)
+    results = None  # Start with all users
+    if formset.is_valid():
+        results = Book.objects.all()
+        for form in formset:
+            key = form.cleaned_data['key']
+
+            constraint = form.cleaned_data['constraint']
+
+            value = form.cleaned_data['value']
+
+            results = results.filter(**{f'{key}__{constraint}': value})
+
+    return render(request, 'books/bookquery.html', {'formset': formset,  'results': results})
+
+
+def delete_book(request, pk):
+    book = Book.objects.get(pk=pk)
+    book.delete()
+    return redirect('home')

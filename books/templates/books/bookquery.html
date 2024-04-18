@@ -1,0 +1,66 @@
+{% extends 'base_generic.html' %} {% block content %}
+<h1>Search Book</h1>
+<form method="post" action="{% url 'bookquery_view' %}">
+  {% csrf_token %} {{ formset.management_form }}
+  <!-- Necessary for formsets to manage the total forms -->
+  <div id="formset-container">
+    {% for form in formset %}
+    <div class="form-copy">{{ form.as_p }}</div>
+    {% endfor %}
+  </div>
+  <button type="button" id="add-more">Add More</button>
+  <input type="submit" value="Search" />
+</form>
+
+{% if results %}
+<h2>Search Results</h2>
+<ul>
+  {% for book in results %}
+  <li>
+    Name: {{ book.name }} (Price: {{ book.price }})
+    <a href="{% url 'book_detail' book.pk %}">Edit</a>
+    <!-- Form for deleting a book -->
+
+    <form
+      action="{% url 'delete_book' book.pk %}"
+      method="post"
+      style="display: inline"
+    >
+      {% csrf_token %}
+      <button
+        type="submit"
+        onclick="return confirm('Are you sure you want to delete this book?');"
+      >
+        Delete
+      </button>
+    </form>
+  </li>
+  {% empty %}
+  <li>No users found matching the criteria.</li>
+  {% endfor %}
+</ul>
+{% endif %}
+<script>
+  document.getElementById("add-more").addEventListener("click", function () {
+    console.log("dd");
+    var container = document.getElementById("formset-container");
+    var newForm = container
+      .querySelector(".form-copy:last-child")
+      .cloneNode(true);
+    var formCount = parseInt(
+      document.getElementById("id_form-TOTAL_FORMS").value
+    );
+
+    // Update the names and ids for the new form elements
+    newForm.innerHTML = newForm.innerHTML.replace(
+      /form-(\d+)-/g,
+      function (match, p1) {
+        return "form-" + formCount + "-";
+      }
+    );
+
+    container.appendChild(newForm);
+    document.getElementById("id_form-TOTAL_FORMS").value = formCount + 1;
+  });
+</script>
+{% endblock %}

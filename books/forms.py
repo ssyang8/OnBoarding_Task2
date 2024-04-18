@@ -20,7 +20,6 @@ class QueryForm(forms.Form):
         ('age', 'Age'),
         ('name', 'Name'),
         ('liked_books', 'Liked_books'),
-
     ]
     CONSTRAINT_CHOICES = [
         ('gt', 'Greater than'),
