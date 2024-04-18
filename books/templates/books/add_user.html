@@ -1,0 +1,8 @@
+<!-- add_user.html -->
+{% extends 'base_generic.html' %} {% block content %}
+<h2>Add New User</h2>
+<form method="post">
+  {% csrf_token %} {{ form.as_p }}
+  <button type="submit">Add User</button>
+</form>
+{% endblock %}
